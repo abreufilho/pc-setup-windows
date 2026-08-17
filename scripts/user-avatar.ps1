@@ -1,5 +1,5 @@
 # Download and Set GitHub Avatar Script
-# Save as github-avatar.ps1
+# Save as user-avatar.ps1
 # Run as administrator
 
 Write-Host "Downloading and Setting GitHub Avatar..." -ForegroundColor Cyan

@@ -1,5 +1,5 @@
 # Windows 11 Visual Customization Script
-# Save as visual-customize.ps1
+# Save as customization-screen.ps1
 # Run as administrator
 
 Write-Host "Applying Visual Customizations..." -ForegroundColor Cyan

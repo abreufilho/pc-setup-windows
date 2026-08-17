@@ -1,5 +1,5 @@
 # Windows 11 Privacy Enhancement Script
-# Save as privacy-enhance.ps1
+# Save as privacy-enhancement.ps1
 # Run as administrator
 
 Write-Host "Applying Privacy Enhancements..." -ForegroundColor Cyan

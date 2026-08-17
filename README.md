@@ -30,8 +30,12 @@ Antes de começar, certifique-se de que você possui:
    - **Clonar**: Use o comando `git clone https://github.com/abreufilho/pc-setup-windows` (requer Git).
    - **Baixar**: Clique em **Code** → **Download ZIP**.
 3. Extraia o arquivo ZIP baixado (se aplicável).
-4. Abra o PowerShell como Administrador na pasta extraída.
-5. Siga os passos na seção **Configuração Básica** abaixo.
+4. Dê duplo clique em **`setup.bat`**.
+5. Confirme a solicitação de administrador do Windows e escolha uma opção no menu.
+
+O launcher desbloqueia os arquivos baixados com `Unblock-File` e executa cada script
+em um processo PowerShell com `ExecutionPolicy Bypass`. A política de execução do
+Windows não é alterada permanentemente.
 
 ---
 
@@ -43,9 +47,9 @@ Antes de começar, certifique-se de que você possui:
   - Aplicativos regulares (VSCode, Git, Chrome, etc.).
   - Aplicativos da Microsoft Store (WhatsApp).
 
-### **visual-customize.ps1**
+### **customization-screen.ps1**
 - Personaliza a aparência do Windows 11:
-  - Define o escalonamento de exibição para 100%.
+  - Ajusta o escalonamento de exibição.
   - Ativa o modo escuro.
   - Configura a barra de tarefas (alinhamento à esquerda, ícones pequenos).
   - Define uma cor sólida como plano de fundo.
@@ -62,7 +66,7 @@ Antes de começar, certifique-se de que você possui:
   - Configura prioridades de CPU e gerenciamento de memória.
   - Define o plano de energia de alto desempenho.
 
-### **privacy-enhance.ps1**
+### **privacy-enhancement.ps1**
 - Melhora as configurações de privacidade do Windows:
   - Desativa a telemetria e coleta de dados.
   - Configura diagnósticos e rastreamento de aplicativos.
@@ -74,14 +78,8 @@ Antes de começar, certifique-se de que você possui:
   - Remove widgets.
   - Limpa itens de entrega de conteúdo.
 
-### **github-avatar.ps1**
+### **user-avatar.ps1**
 - Faz download e define o avatar do GitHub como a imagem de perfil do Windows.
-
-### **customization-screen.ps1**
-- Personaliza configurações de tela do Windows:
-  - Configura o brilho e a resolução da tela.
-  - Ajusta a taxa de atualização, se aplicável.
-  - Permite configuração rápida para monitores múltiplos.
 
 ### **debloat.ps1**
 - Remove aplicativos e recursos desnecessários do Windows:
@@ -98,8 +96,10 @@ Antes de começar, certifique-se de que você possui:
    - **Baixar**: Use a opção **Download ZIP** no GitHub.
 2. Extraia o arquivo ZIP baixado, se aplicável.
 3. Navegue até a pasta extraída.
-4. Clique com o botão direito no script desejado.
-5. Selecione **Executar com PowerShell como Administrador**.
+4. Execute `setup.bat` e confirme a solicitação de administrador.
+
+O menu também permite abrir um PowerShell elevado, já posicionado na pasta do
+repositório e com a liberação válida apenas para aquela sessão.
 
 ---
 
@@ -109,28 +109,29 @@ Antes de começar, certifique-se de que você possui:
 
 ```powershell
 # 1. Primeiro, instale os programas básicos
-.\install-programs.ps1
+.\scripts\install-programs.ps1
 
 # 2. Instale o WSL2 (se necessário)
-.\install-wsl.ps1
+.\scripts\install-wsl.ps1
 
 # 3. Aplique as personalizações visuais
-.\visual-customize.ps1
+.\scripts\customization-screen.ps1
 
-# 4. Configure a tela
-.\customization-screen.ps1
+# 4. Otimize o desempenho
+.\scripts\performance-optimize.ps1
 
-# 5. Otimize o desempenho
-.\performance-optimize.ps1
+# 5. Melhore a privacidade
+.\scripts\privacy-enhancement.ps1
 
-# 6. Melhore a privacidade
-.\privacy-enhance.ps1
+# 6. Remova aplicativos indesejados
+.\scripts\debloat.ps1
 
-# 7. Remova aplicativos indesejados
-.\debloat.ps1
+# 7. Limpe a barra de tarefas
+.\scripts\taskbar-cleanup.ps1
 
-# 8. Limpe a barra de tarefas
-.\taskbar-cleanup.ps1
+# 8. Defina o avatar do GitHub como imagem de perfil
+.\scripts\user-avatar.ps1
+```
 
-# Defina o avatar do GitHub como imagem de perfil
-.\github-avatar.ps1
+> O script do WSL pode solicitar uma reinicialização. Nesse caso, reinicie o
+> computador e execute `setup.bat` novamente para continuar as demais etapas.
