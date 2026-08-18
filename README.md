@@ -21,7 +21,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p
 
 O bootstrap baixa uma cópia nova em `C:\Users\<usuario>\pc-setup-windows` e abre
 `setup.bat`. O launcher solicita elevação pelo UAC sem alterar permanentemente a
-política de execução do PowerShell.
+política de execução do PowerShell. A sessão elevada permanece aberta para que
+qualquer erro fique visível; depois de sair do menu, use `exit` para fechá-la.
 
 Também é possível baixar o ZIP pelo GitHub, extrair e dar duplo clique em
 `setup.bat`.

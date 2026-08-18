@@ -32,7 +32,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SETUP_ENTRYPOINT%"
+rem Mantem a sessao aberta para que erros de inicializacao nunca desaparecam.
+powershell.exe -NoLogo -NoExit -NoProfile -ExecutionPolicy Bypass -File "%SETUP_ENTRYPOINT%"
 set "SETUP_EXIT_CODE=%ERRORLEVEL%"
 
 if not "%SETUP_EXIT_CODE%"=="0" (

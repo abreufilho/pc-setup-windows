@@ -109,6 +109,14 @@ foreach ($file in $productionFiles) {
     }
 }
 
+Write-Host 'Validando launcher...' -ForegroundColor Cyan
+$launcherPath = Join-Path $rootPath 'setup.bat'
+$launcherContent = Get-Content -LiteralPath $launcherPath -Raw
+
+if ($launcherContent -notmatch '(?i)powershell\.exe\s+-NoLogo\s+-NoExit\s+-NoProfile.+-File\s+"%SETUP_ENTRYPOINT%"') {
+    $failures.Add('setup.bat deve manter o PowerShell aberto com -NoExit.')
+}
+
 if ($failures.Count -gt 0) {
     Write-Host ''
     foreach ($failure in $failures) {
