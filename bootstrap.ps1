@@ -18,10 +18,6 @@ $archivePath = Join-Path $temporaryDirectory 'repository.zip'
 $extractPath = Join-Path $temporaryDirectory 'extract'
 $destinationPath = Join-Path $env:USERPROFILE 'pc-setup-windows'
 
-if (Test-Path -LiteralPath $destinationPath) {
-    $destinationPath = Join-Path $env:USERPROFILE ('pc-setup-windows-{0}' -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
-}
-
 try {
     $null = New-Item -Path $temporaryDirectory -ItemType Directory -Force
     Write-Host 'Baixando a versao mais recente do setup...' -ForegroundColor Cyan
@@ -37,8 +33,12 @@ try {
         throw 'A estrutura esperada nao foi encontrada no arquivo baixado.'
     }
 
-    Copy-Item -LiteralPath $sourcePath.FullName -Destination $destinationPath -Recurse
-    Write-Host "Setup preparado em: $destinationPath" -ForegroundColor Green
+    $null = New-Item -Path $destinationPath -ItemType Directory -Force
+    foreach ($item in Get-ChildItem -LiteralPath $sourcePath.FullName -Force) {
+        Copy-Item -LiteralPath $item.FullName -Destination $destinationPath -Recurse -Force
+    }
+
+    Write-Host "Setup atualizado em: $destinationPath" -ForegroundColor Green
 
     Start-Process -FilePath (Join-Path $destinationPath 'setup.bat') -WorkingDirectory $destinationPath
 } finally {
@@ -46,4 +46,3 @@ try {
         Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force
     }
 }
-

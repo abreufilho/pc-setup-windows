@@ -10,22 +10,21 @@ em uso com dados e preferências acumuladas.
 
 ## Início rápido após a formatação
 
-Conclua primeiro a configuração inicial do Windows, conecte-se à internet e abra
-o **Windows PowerShell**. Execute:
+Conclua primeiro a configuração inicial do Windows e conecte-se à internet.
+Depois:
 
-```powershell
-$p = "$env:TEMP\pc-setup-bootstrap.ps1"
-Invoke-WebRequest "https://raw.githubusercontent.com/abreufilho/pc-setup-windows/main/bootstrap.ps1" -OutFile $p
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p
-```
+1. [Baixe o `install.bat`](https://raw.githubusercontent.com/abreufilho/pc-setup-windows/main/install.bat).
+2. Dê duplo clique no arquivo baixado.
+3. Confirme o aviso do Windows e a solicitação do UAC.
 
-O bootstrap baixa uma cópia nova em `C:\Users\<usuario>\pc-setup-windows` e abre
-`setup.bat`. O launcher solicita elevação pelo UAC sem alterar permanentemente a
-política de execução do PowerShell. A sessão elevada permanece aberta para que
-qualquer erro fique visível; depois de sair do menu, use `exit` para fechá-la.
+O instalador baixa a versão mais recente, cria ou atualiza sempre a mesma pasta
+`C:\Users\<usuario>\pc-setup-windows` e abre `setup.bat`. Ele pode ser executado
+novamente sem criar cópias numeradas e sem repetir instalações já concluídas.
+O launcher solicita elevação pelo UAC sem alterar permanentemente a política de
+execução do PowerShell. Em caso de falha, a janela permanece aberta com o erro.
 
-Também é possível baixar o ZIP pelo GitHub, extrair e dar duplo clique em
-`setup.bat`.
+Como alternativa, é possível baixar o ZIP pelo GitHub, extrair e dar duplo clique
+em `setup.bat`.
 
 ## Configuração recomendada
 
@@ -138,7 +137,8 @@ O plano de energia padrão é `Balanced`; a preferência pode ser alterada em
 
 ```text
 .
-├── bootstrap.ps1               # baixa e abre uma cópia nova do setup
+├── install.bat                 # instalador idempotente de duplo clique
+├── bootstrap.ps1               # baixa, atualiza e abre o setup
 ├── setup.bat                   # launcher elevado para duplo clique
 ├── setup.ps1                   # menu e orquestração
 ├── config/

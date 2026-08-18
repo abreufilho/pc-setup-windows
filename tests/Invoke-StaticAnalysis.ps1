@@ -112,9 +112,33 @@ foreach ($file in $productionFiles) {
 Write-Host 'Validando launcher...' -ForegroundColor Cyan
 $launcherPath = Join-Path $rootPath 'setup.bat'
 $launcherContent = Get-Content -LiteralPath $launcherPath -Raw
+$installerPath = Join-Path $rootPath 'install.bat'
+$installerContent = Get-Content -LiteralPath $installerPath -Raw
+$bootstrapPath = Join-Path $rootPath 'bootstrap.ps1'
+$bootstrapContent = Get-Content -LiteralPath $bootstrapPath -Raw
 
 if ($launcherContent -notmatch '(?i)powershell\.exe\s+-NoLogo\s+-NoExit\s+-NoProfile.+-File\s+"%SETUP_ENTRYPOINT%"') {
     $failures.Add('setup.bat deve manter o PowerShell aberto com -NoExit.')
+}
+
+if ($installerContent -notmatch '(?i)Invoke-WebRequest.+BOOTSTRAP_URL.+BOOTSTRAP_PATH') {
+    $failures.Add('install.bat deve baixar o bootstrap mais recente.')
+}
+
+if ($installerContent -notmatch '(?i)-File\s+"%BOOTSTRAP_PATH%"') {
+    $failures.Add('install.bat deve executar o bootstrap baixado.')
+}
+
+if ($installerContent -match '(?i)\biex\b|Invoke-Expression') {
+    $failures.Add('install.bat nao deve executar conteudo remoto em memoria.')
+}
+
+if ($bootstrapContent -match 'pc-setup-windows-\{0\}') {
+    $failures.Add('bootstrap.ps1 nao deve criar destinos com timestamp.')
+}
+
+if ($bootstrapContent -notmatch 'Join-Path \$env:USERPROFILE ''pc-setup-windows''') {
+    $failures.Add('bootstrap.ps1 deve atualizar sempre o mesmo destino.')
 }
 
 if ($failures.Count -gt 0) {
