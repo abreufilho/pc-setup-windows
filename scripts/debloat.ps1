@@ -1,79 +1,86 @@
-# Requires administrator privileges
-# Right-click this script and select "Run as Administrator"
-
-# Stop and disable unnecessary services
-$ServicesToDisable = @(
-    "DiagTrack"                # Connected User Experiences and Telemetry
-    "dmwappushservice"         # Device Management Wireless Application Protocol
-    "SysMain"                  # Superfetch
-    "OneSyncSvc"              # Sync Host Service
-    "RetailDemo"              # Retail Demo Service
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
+param(
+    [switch] $RequireConfirmation
 )
 
-foreach ($service in $ServicesToDisable) {
-    Write-Host "Stopping and disabling $service..."
-    Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
-    Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
+
+$scriptsPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPath = Split-Path -Parent $scriptsPath
+Import-Module (Join-Path $scriptsPath 'lib\Setup.Common.psm1') -Force
+Assert-SetupEnvironment -RequireAdministrator
+
+$config = Import-PowerShellDataFile -Path (Join-Path $rootPath 'config\setup.psd1')
+$apps = @($config.Cleanup.Apps)
+$protectedApps = @($config.Cleanup.ProtectedApps)
+$shouldConfirm = $RequireConfirmation -or $config.Cleanup.RequireConfirmation
+
+Write-SetupSection -Message 'Limpeza agressiva pos-formatacao'
+Write-Host ('Modo: {0}' -f $config.Cleanup.Mode) -ForegroundColor Yellow
+Write-Host ('Aplicativos selecionados: {0}' -f $apps.Count)
+Write-Host ('Protegidos: {0}' -f ($protectedApps -join ', ')) -ForegroundColor Green
+
+if ($shouldConfirm) {
+    $confirmation = Read-Host 'Digite LIMPAR para continuar'
+    if ($confirmation -cne 'LIMPAR') {
+        Write-Host 'Operacao cancelada; nada foi removido.' -ForegroundColor Yellow
+        return
+    }
 }
 
-# Remove built-in apps
-$AppsToRemove = @(
-    "Microsoft.BingNews"
-    "Microsoft.BingWeather"
-    "Microsoft.GamingApp"
-    "Microsoft.GetHelp"
-    "Microsoft.Getstarted"
-    "Microsoft.MicrosoftOfficeHub"
-    "Microsoft.MicrosoftSolitaireCollection"
-    "Microsoft.People"
-    "Microsoft.PowerAutomateDesktop"
-    "Microsoft.SecHealthUI"
-    "Microsoft.Whiteboard"
-    "Microsoft.WindowsFeedbackHub"
-    "Microsoft.WindowsMaps"
-    "Microsoft.Xbox.TCUI"
-    "Microsoft.XboxGameOverlay"
-    "Microsoft.XboxGamingOverlay"
-    "Microsoft.XboxIdentityProvider"
-    "Microsoft.XboxSpeechToTextOverlay"
-    "microsoft.windowscommunicationsapps"
-    "Microsoft.WindowsAlarms"
-    "Microsoft.YourPhone"
-    "MicrosoftTeams"
-    "Microsoft.549981C3F5F10"  # Cortana
-)
+$provisionedPackages = @(Get-AppxProvisionedPackage -Online)
+$removed = New-Object System.Collections.Generic.List[string]
+$failures = New-Object System.Collections.Generic.List[string]
 
-foreach ($app in $AppsToRemove) {
-    Write-Host "Removing $app..."
-    Get-AppxPackage -Name $app -AllUsers | Remove-AppxPackage -ErrorAction SilentlyContinue
-    Get-AppXProvisionedPackage -Online | Where-Object DisplayName -eq $app | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+foreach ($appName in $apps) {
+    if ($protectedApps -contains $appName) {
+        $failures.Add("Configuracao invalida: $appName esta protegido.")
+        continue
+    }
+
+    $changed = $false
+
+    try {
+        foreach ($package in @(Get-AppxPackage -Name $appName -AllUsers -ErrorAction SilentlyContinue)) {
+            if ($PSCmdlet.ShouldProcess($package.Name, 'Remover aplicativo de todos os usuarios')) {
+                Remove-AppxPackage `
+                    -Package $package.PackageFullName `
+                    -AllUsers `
+                    -ErrorAction Stop
+                $changed = $true
+            }
+        }
+
+        foreach ($package in @($provisionedPackages | Where-Object { $_.DisplayName -eq $appName })) {
+            if ($PSCmdlet.ShouldProcess($package.DisplayName, 'Remover provisionamento do Windows')) {
+                $null = Remove-AppxProvisionedPackage `
+                    -Online `
+                    -PackageName $package.PackageName `
+                    -AllUsers `
+                    -ErrorAction Stop
+                $changed = $true
+            }
+        }
+
+        if ($changed) {
+            $removed.Add($appName)
+            Write-Host "$appName removido." -ForegroundColor Green
+        } else {
+            Write-Host "$appName nao estava instalado."
+        }
+    } catch {
+        $failures.Add(("{0}: {1}" -f $appName, $_.Exception.Message))
+        Write-Host ("Falha ao remover {0}: {1}" -f $appName, $_.Exception.Message) -ForegroundColor Red
+    }
 }
 
-# Disable Windows telemetry
-Write-Host "Disabling telemetry..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value 0
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0
+Write-SetupSection -Message 'Resumo da limpeza'
+Write-Host ('Aplicativos removidos: {0}' -f $removed.Count) -ForegroundColor Green
 
-# Disable Cortana
-Write-Host "Disabling Cortana..."
-If (!(Test-Path "HKCU:\Software\Microsoft\Personalization\Settings")) {
-    New-Item -Path "HKCU:\Software\Microsoft\Personalization\Settings" -Force
+if ($failures.Count -gt 0) {
+    foreach ($failure in $failures) {
+        Write-Host "[FALHA] $failure" -ForegroundColor Red
+    }
+    throw 'A limpeza terminou com uma ou mais falhas.'
 }
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Personalization\Settings" -Name "AcceptedPrivacyPolicy" -Value 0
-
-# Disable Tips and Suggestions
-Write-Host "Disabling Windows Tips and Suggestions..."
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Value 0
-
-# Disable background apps
-Write-Host "Disabling background apps..."
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" -Name "GlobalUserDisabled" -Value 1
-
-# Optional: Disable Windows Search indexing
-Write-Host "Disabling Windows Search indexing..."
-Stop-Service "WSearch" -Force
-Set-Service "WSearch" -StartupType Disabled
-
-Write-Host "Cleanup complete! Please restart your computer for changes to take effect."
-
-# Note: Some of these changes may reset after major Windows updates

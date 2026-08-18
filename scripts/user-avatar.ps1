@@ -1,60 +1,52 @@
-# Download and Set GitHub Avatar Script
-# Save as user-avatar.ps1
-# Run as administrator
+[CmdletBinding()]
+param(
+    [uri] $AvatarUri
+)
 
-Write-Host "Downloading and Setting GitHub Avatar..." -ForegroundColor Cyan
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
 
-# Download the image
+$scriptsPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPath = Split-Path -Parent $scriptsPath
+Import-Module (Join-Path $scriptsPath 'lib\Setup.Common.psm1') -Force
+Assert-SetupEnvironment -RequireAdministrator
+
+$config = Import-PowerShellDataFile -Path (Join-Path $rootPath 'config\setup.psd1')
+if ($null -eq $AvatarUri) {
+    $AvatarUri = [uri] $config.General.AvatarUri
+}
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$downloadPath = Join-Path $env:TEMP ('pc-setup-avatar-{0}.png' -f [guid]::NewGuid().ToString('N'))
+
 try {
-    $downloadPath = "$env:TEMP\github-avatar.png"
-    Write-Host "Downloading avatar..." -ForegroundColor Yellow
-    Invoke-WebRequest -Uri "https://avatars.githubusercontent.com/u/110954696" -OutFile $downloadPath
-    Write-Host "Avatar downloaded successfully" -ForegroundColor Green
-}
-catch {
-    Write-Host "Error downloading avatar: $_" -ForegroundColor Red
-    exit
-}
+    Write-SetupSection -Message 'Baixando avatar'
+    Invoke-WebRequest -Uri $AvatarUri -OutFile $downloadPath -UseBasicParsing
 
-# Set the avatar
-try {
-    # Get current user's SID
-    $UserSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
-
-    # Set up paths
-    $RegPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AccountPicture\Users\$UserSID"
-    $DestFolder = "$env:PUBLIC\AccountPictures"
-
-    # Create necessary directories
-    if (-not (Test-Path $RegPath)) {
-        New-Item -Path $RegPath -Force | Out-Null
-    }
-    if (-not (Test-Path $DestFolder)) {
-        New-Item -Path $DestFolder -ItemType Directory -Force | Out-Null
+    if ((Get-Item -LiteralPath $downloadPath).Length -lt 512) {
+        throw 'A imagem baixada e invalida ou esta incompleta.'
     }
 
-    # Copy image to Windows account pictures folder
-    $NewImagePath = "$DestFolder\$($env:USERNAME).png"
-    Copy-Item -Path $downloadPath -Destination $NewImagePath -Force
+    $userSid = ([Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+    $registryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AccountPicture\Users\$userSid"
+    $destinationDirectory = Join-Path $env:PUBLIC 'AccountPictures\PCSetup'
+    $destinationPath = Join-Path $destinationDirectory ("{0}.png" -f $env:USERNAME)
 
-    # Set registry values for different image sizes
-    $sizes = @(32, 40, 48, 96, 192, 240, 448)
-    foreach ($size in $sizes) {
-        Set-ItemProperty -Path $RegPath -Name "Image$size" -Value $NewImagePath -ErrorAction SilentlyContinue
+    $null = New-Item -Path $registryPath -Force
+    $null = New-Item -Path $destinationDirectory -ItemType Directory -Force
+    Copy-Item -LiteralPath $downloadPath -Destination $destinationPath -Force
+
+    foreach ($size in @(32, 40, 48, 96, 192, 240, 448)) {
+        Set-SetupRegistryValue `
+            -Path $registryPath `
+            -Name ("Image{0}" -f $size) `
+            -Value $destinationPath `
+            -Type String
     }
 
-    Write-Host "`nAvatar set successfully!" -ForegroundColor Green
-    Write-Host "Please sign out and sign back in to see the changes." -ForegroundColor Yellow
-}
-catch {
-    Write-Host "Error setting avatar: $_" -ForegroundColor Red
-}
-finally {
-    # Cleanup downloaded file
-    if (Test-Path $downloadPath) {
-        Remove-Item -Path $downloadPath -Force
+    Write-Host 'Avatar configurado. Saia e entre novamente para atualizar todas as telas.' -ForegroundColor Green
+} finally {
+    if (Test-Path -LiteralPath $downloadPath) {
+        Remove-Item -LiteralPath $downloadPath -Force
     }
 }
-
-Write-Host "`nPress any key to exit..."
-$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')

@@ -1,49 +1,51 @@
-# Windows 11 Privacy Enhancement Script
-# Save as privacy-enhancement.ps1
-# Run as administrator
+[CmdletBinding()]
+param()
 
-Write-Host "Applying Privacy Enhancements..." -ForegroundColor Cyan
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
 
-# Activity & Timeline
-Write-Host "Disabling Activity History and Timeline..."
-New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Force | Out-Null
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "EnableActivityFeed" -Value 0
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0
+$scriptsPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $scriptsPath 'lib\Setup.Common.psm1') -Force
+Assert-SetupEnvironment -RequireAdministrator
 
-# Data Collection & Telemetry
-Write-Host "Reducing Data Collection..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value 0
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "MaxTelemetryAllowed" -Value 0
+Write-SetupSection -Message 'Historico de atividades'
+Set-SetupRegistryValue `
+    -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' `
+    -Name 'EnableActivityFeed' `
+    -Value 0
+Set-SetupRegistryValue `
+    -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' `
+    -Name 'PublishUserActivities' `
+    -Value 0
+Set-SetupRegistryValue `
+    -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' `
+    -Name 'UploadUserActivities' `
+    -Value 0
 
-# Diagnostic Data
-Write-Host "Disabling Diagnostic Data..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack" -Name "DiagTrackAuthorization" -Value 0
+Write-SetupSection -Message 'Diagnosticos e experiencias personalizadas'
+Set-SetupRegistryValue `
+    -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' `
+    -Name 'AllowTelemetry' `
+    -Value 0
+Set-SetupRegistryValue `
+    -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy' `
+    -Name 'TailoredExperiencesWithDiagnosticDataEnabled' `
+    -Value 0
 
-# Advertising & Tracking
-Write-Host "Disabling Advertising ID and Tracking..."
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 0
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" -Name "TailoredExperiencesWithDiagnosticDataEnabled" -Value 0
+Write-SetupSection -Message 'Publicidade e sugestoes'
+Set-SetupRegistryValue `
+    -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo' `
+    -Name 'Enabled' `
+    -Value 0
+Set-SetupRegistryValue `
+    -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' `
+    -Name 'SubscribedContent-338389Enabled' `
+    -Value 0
+Set-SetupRegistryValue `
+    -Path 'HKCU:\SOFTWARE\Microsoft\Siuf\Rules' `
+    -Name 'NumberOfSIUFInPeriod' `
+    -Value 0
 
-# Location Tracking
-Write-Host "Disabling Location Tracking..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" -Name "Value" -Value "Deny"
-
-# App Diagnostics
-Write-Host "Disabling App Diagnostics..."
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics" -Name "Value" -Value "Deny"
-
-# Windows Tips
-Write-Host "Disabling Windows Tips..."
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Value 0
-
-# Feedback
-Write-Host "Disabling Feedback..."
-If (!(Test-Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules")) {
-    New-Item -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Force | Out-Null
-}
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Siuf\Rules" -Name "NumberOfSIUFInPeriod" -Value 0
-
-Write-Host "`nPrivacy enhancements complete!" -ForegroundColor Green
-Write-Host "Press any key to exit..."
-$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+Write-Host ''
+Write-Host 'Ajustes aplicados sem desativar Defender, Windows Update ou servicos de diagnostico.' -ForegroundColor Green
+Write-Host 'Algumas edicoes do Windows impõem um nivel minimo de dados obrigatorios.' -ForegroundColor Yellow

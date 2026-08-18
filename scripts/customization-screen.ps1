@@ -1,71 +1,40 @@
-# Windows 11 Visual Customization Script
-# Save as customization-screen.ps1
-# Run as administrator
+[CmdletBinding()]
+param()
 
-Write-Host "Applying Visual Customizations..." -ForegroundColor Cyan
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
 
-# Function to safely set registry values
-function Set-RegistryValue {
-    param(
-        [string]$Path,
-        [string]$Name,
-        [object]$Value
-    )
-    try {
-        if (!(Test-Path $Path)) {
-            New-Item -Path $Path -Force | Out-Null
-        }
-        Set-ItemProperty -Path $Path -Name $Name -Value $Value -ErrorAction Stop
-        Write-Host "Successfully set $Name" -ForegroundColor Green
-    } catch {
-        Write-Host "Failed to set $Name : $_" -ForegroundColor Red
-    }
+$scriptsPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $scriptsPath 'lib\Setup.Common.psm1') -Force
+Assert-SetupEnvironment -RequireAdministrator
+
+Write-SetupSection -Message 'Tema escuro'
+$themePath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+Set-SetupRegistryValue -Path $themePath -Name 'SystemUsesLightTheme' -Value 0
+Set-SetupRegistryValue -Path $themePath -Name 'AppsUseLightTheme' -Value 0
+Set-SetupRegistryValue -Path $themePath -Name 'EnableTransparency' -Value 0
+
+Write-SetupSection -Message 'Area de trabalho'
+Set-SetupRegistryValue `
+    -Path 'HKCU:\Control Panel\Desktop' `
+    -Name 'WallPaper' `
+    -Value '' `
+    -Type String
+Set-SetupRegistryValue `
+    -Path 'HKCU:\Control Panel\Colors' `
+    -Name 'Background' `
+    -Value '50 50 50' `
+    -Type String
+
+Write-SetupSection -Message 'Alinhamento da barra de tarefas'
+Set-SetupRegistryValue `
+    -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' `
+    -Name 'TaskbarAl' `
+    -Value 0
+
+& rundll32.exe user32.dll,UpdatePerUserSystemParameters
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning 'O papel de parede sera atualizado no proximo login.'
 }
 
-# Set display scaling to 100%
-Write-Host "`nSetting display scaling to 100%..." -ForegroundColor Yellow
-Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "LogPixels" -Value 120
-Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "Win8DpiScaling" -Value 1
-
-# Set solid color as background
-Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "WallPaper" -Value ""
-Set-ItemProperty -Path "HKCU:\Control Panel\Colors" -Name "Background" -Value "50 50 50"
-
-# Refresh the desktop
-RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters
-
-# Move taskbar to the left
-Write-Host "`nMoving taskbar alignment to left..." -ForegroundColor Yellow
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAl" -Value 0
-
-# Enable Dark Mode
-Write-Host "`nEnabling Dark Mode..." -ForegroundColor Yellow
-# System-wide dark mode
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "SystemUsesLightTheme" -Value 0
-# Apps dark mode
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name "AppsUseLightTheme" -Value 0
-
-# Additional taskbar settings
-Write-Host "`nCustomizing taskbar settings..." -ForegroundColor Yellow
-# Show all taskbar icons
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "EnableAutoTray" -Value 0
-# Combine taskbar buttons when taskbar is full
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarGlomLevel" -Value 0
-# Make sure small taskbar buttons are enabled
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarSmallIcons" -Value 1
-# Show taskbar on all displays
-Set-RegistryValue -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "MMTaskbarEnabled" -Value 1
-
-# Force restart Explorer to apply changes
-Write-Host "`nRestarting Explorer to apply changes..." -ForegroundColor Yellow
-try {
-    taskkill /f /im explorer.exe
-    Start-Sleep -Seconds 2
-    Start-Process explorer.exe
-    Write-Host "Explorer restarted successfully" -ForegroundColor Green
-} catch {
-    Write-Host "Failed to restart Explorer: $_" -ForegroundColor Red
-}
-
-Write-Host "`nPress any key to exit..."
-$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+Write-Host 'Personalizacao aplicada. A escala de exibicao foi preservada.' -ForegroundColor Green

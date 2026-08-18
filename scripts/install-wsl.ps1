@@ -1,68 +1,72 @@
-# WSL2 Installation and Setup Script
-# Save as install-wsl.ps1
-# Run as administrator
+[CmdletBinding()]
+param(
+    [string] $Distribution,
+    [switch] $WebDownload
+)
 
-Write-Host "Starting WSL2 Installation..." -ForegroundColor Cyan
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
 
-# Check Windows version (needs Windows 10 version 2004 or higher)
-$windowsVersion = [System.Environment]::OSVersion.Version
-if ($windowsVersion.Build -lt 19041) {
-    Write-Host "Error: You need Windows 10 version 2004 or higher to install WSL2" -ForegroundColor Red
-    exit 1
+$scriptsPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPath = Split-Path -Parent $scriptsPath
+Import-Module (Join-Path $scriptsPath 'lib\Setup.Common.psm1') -Force
+Assert-SetupEnvironment -RequireAdministrator
+
+$config = Import-PowerShellDataFile -Path (Join-Path $rootPath 'config\setup.psd1')
+if ([string]::IsNullOrWhiteSpace($Distribution)) {
+    $Distribution = $config.General.WslDistribution
 }
 
-# Enable Windows features
-Write-Host "`nEnabling required Windows features..." -ForegroundColor Yellow
-try {
-    # Enable Virtual Machine Platform
-    Write-Host "Enabling Virtual Machine Platform..."
-    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
-
-    # Enable WSL
-    Write-Host "Enabling Windows Subsystem for Linux..."
-    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-} catch {
-    Write-Host "Error enabling Windows features: $_" -ForegroundColor Red
-    exit 1
+$buildNumber = [Environment]::OSVersion.Version.Build
+if ($buildNumber -lt 19041) {
+    throw "O WSL 2 exige Windows build 19041 ou superior. Build atual: $buildNumber."
 }
 
-# Install WSL command
-Write-Host "`nInstalling WSL..." -ForegroundColor Yellow
-try {
-    wsl --install --no-distribution
-} catch {
-    Write-Host "Error installing WSL: $_" -ForegroundColor Red
-    exit 1
+Write-SetupSection -Message 'Verificando WSL 2'
+$installedDistributions = @()
+$distributionOutput = & wsl.exe --list --quiet 2>$null
+
+if ($LASTEXITCODE -eq 0) {
+    $installedDistributions = @(
+        $distributionOutput |
+            ForEach-Object { ($_ -replace "`0", '').Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
 }
 
-# Set WSL 2 as default
-Write-Host "`nSetting WSL 2 as default..." -ForegroundColor Yellow
-try {
-    wsl --set-default-version 2
-} catch {
-    Write-Host "Error setting WSL 2 as default: $_" -ForegroundColor Red
-}
+if ($installedDistributions -contains $Distribution) {
+    Write-Host "$Distribution ja esta instalado." -ForegroundColor Green
+    Invoke-SetupNativeCommand -FilePath 'wsl.exe' -ArgumentList @('--set-default-version', '2')
 
-# Install Ubuntu (default distribution)
-Write-Host "`nInstalling Ubuntu..." -ForegroundColor Yellow
-try {
-    wsl --install -d Ubuntu
-} catch {
-    Write-Host "Error installing Ubuntu: $_" -ForegroundColor Red
-}
-
-Write-Host "`nWSL2 installation complete!" -ForegroundColor Green
-Write-Host "IMPORTANT NEXT STEPS:" -ForegroundColor Yellow
-Write-Host "1. Restart your computer now" -ForegroundColor Yellow
-Write-Host "2. After restart, Ubuntu will automatically start and ask you to create a username and password" -ForegroundColor Yellow
-Write-Host "3. After that's done, you can proceed with installing Docker Desktop" -ForegroundColor Yellow
-
-Write-Host "`nWould you like to restart your computer now? (y/n)" -ForegroundColor Cyan
-$response = Read-Host
-if ($response -eq 'y') {
-    Restart-Computer -Force
+    try {
+        Invoke-SetupNativeCommand -FilePath 'wsl.exe' -ArgumentList @('--update')
+    } catch {
+        Write-Warning "Nao foi possivel atualizar o WSL agora: $($_.Exception.Message)"
+    }
 } else {
-    Write-Host "`nPlease restart your computer manually before using WSL2" -ForegroundColor Yellow
-    Write-Host "Press any key to exit..."
-    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    Write-Host "Instalando WSL 2 com $Distribution..." -ForegroundColor Yellow
+    $installArguments = @('--install', '--distribution', $Distribution, '--no-launch')
+    if ($WebDownload) {
+        $installArguments += '--web-download'
+    }
+
+    Invoke-SetupNativeCommand `
+        -FilePath 'wsl.exe' `
+        -ArgumentList $installArguments `
+        -SuccessExitCodes @(0, 3010)
+
+    try {
+        Invoke-SetupNativeCommand -FilePath 'wsl.exe' -ArgumentList @('--set-default-version', '2')
+    } catch {
+        Write-Warning 'A versao padrao sera confirmada depois da reinicializacao.'
+    }
+}
+
+Write-SetupSection -Message 'Estado do WSL'
+& wsl.exe --status
+
+if (Test-SetupPendingRestart) {
+    Write-Host 'Reinicie o Windows antes de abrir o Ubuntu ou iniciar o Docker Desktop.' -ForegroundColor Yellow
+} else {
+    Write-Host "Abra $Distribution para concluir a criacao do usuario Linux." -ForegroundColor Green
 }

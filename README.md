@@ -1,137 +1,183 @@
-# Scripts de Configuração do Windows 11
+# PC Setup Windows 11
 
-Uma coleção de scripts PowerShell para automatizar a configuração e personalização do Windows 11.
+Setup pessoal, idempotente e auditável para preparar uma instalação limpa do
+Windows 11 depois de uma restauração pela nuvem.
 
-Repositório no GitHub: [pc-setup-windows](https://github.com/abreufilho/pc-setup-windows)
+O projeto instala os programas escolhidos, configura WSL 2, remove o OneDrive,
+executa uma limpeza agressiva de aplicativos de consumo e deixa o OpenSSH ativo
+somente para a rede local. O alvo é uma máquina recém-formatada, não um Windows
+em uso com dados e preferências acumuladas.
 
----
+## Início rápido após a formatação
 
-## Objetivo
-
-Esses scripts ajudam a configurar rapidamente uma nova instalação do Windows 11, economizando tempo e garantindo configurações consistentes. Siga as instruções deste README para preparar seu sistema.
-
----
-
-## Pré-requisitos
-
-Antes de começar, certifique-se de que você possui:
-
-1. Uma instalação nova do Windows 11.
-2. PowerShell 5.1 ou superior (pré-instalado no Windows 11).
-3. Privilégios de administrador para executar os scripts.
-
----
-
-## Início Rápido
-
-1. Acesse o repositório no GitHub após a instalação do Windows 11:
-   [pc-setup-windows](https://github.com/abreufilho/pc-setup-windows)
-2. Clone ou baixe o repositório:
-   - **Clonar**: Use o comando `git clone https://github.com/abreufilho/pc-setup-windows` (requer Git).
-   - **Baixar**: Clique em **Code** → **Download ZIP**.
-3. Extraia o arquivo ZIP baixado (se aplicável).
-4. Dê duplo clique em **`setup.bat`**.
-5. Confirme a solicitação de administrador do Windows e escolha uma opção no menu.
-
-O launcher desbloqueia os arquivos baixados com `Unblock-File` e executa cada script
-em um processo PowerShell com `ExecutionPolicy Bypass`. A política de execução do
-Windows não é alterada permanentemente.
-
----
-
-## Visão Geral dos Scripts
-
-### **install-programs.ps1**
-- Instala aplicativos comuns usando o `winget`.
-- Inclui:
-  - Aplicativos regulares (VSCode, Git, Chrome, etc.).
-  - Aplicativos da Microsoft Store (WhatsApp).
-
-### **customization-screen.ps1**
-- Personaliza a aparência do Windows 11:
-  - Ajusta o escalonamento de exibição.
-  - Ativa o modo escuro.
-  - Configura a barra de tarefas (alinhamento à esquerda, ícones pequenos).
-  - Define uma cor sólida como plano de fundo.
-
-### **install-wsl.ps1**
-- Instala e configura o WSL2 (Subsistema do Windows para Linux):
-  - Ativa os recursos necessários do Windows.
-  - Define o WSL2 como versão padrão.
-  - Instala a distribuição Ubuntu.
-
-### **performance-optimize.ps1**
-- Otimiza o Windows para melhor desempenho:
-  - Ajusta efeitos visuais.
-  - Configura prioridades de CPU e gerenciamento de memória.
-  - Define o plano de energia de alto desempenho.
-
-### **privacy-enhancement.ps1**
-- Melhora as configurações de privacidade do Windows:
-  - Desativa a telemetria e coleta de dados.
-  - Configura diagnósticos e rastreamento de aplicativos.
-  - Desativa o ID de publicidade.
-
-### **taskbar-cleanup.ps1**
-- Remove itens indesejados da barra de tarefas:
-  - Desativa notícias e interesses.
-  - Remove widgets.
-  - Limpa itens de entrega de conteúdo.
-
-### **user-avatar.ps1**
-- Faz download e define o avatar do GitHub como a imagem de perfil do Windows.
-
-### **debloat.ps1**
-- Remove aplicativos e recursos desnecessários do Windows:
-  - Desinstala bloatwares pré-instalados.
-  - Desativa serviços e tarefas agendadas não essenciais.
-  - Melhora o desempenho ao reduzir recursos não utilizados.
-
----
-
-## Instalação
-
-1. Clone este repositório ou baixe os scripts:
-   - **Clonar**: Use o comando `git clone https://github.com/abreufilho/pc-setup-windows` no PowerShell.
-   - **Baixar**: Use a opção **Download ZIP** no GitHub.
-2. Extraia o arquivo ZIP baixado, se aplicável.
-3. Navegue até a pasta extraída.
-4. Execute `setup.bat` e confirme a solicitação de administrador.
-
-O menu também permite abrir um PowerShell elevado, já posicionado na pasta do
-repositório e com a liberação válida apenas para aquela sessão.
-
----
-
-## Uso
-
-### **Configuração Básica (Ordem Recomendada)**
+Conclua primeiro a configuração inicial do Windows, conecte-se à internet e abra
+o **Windows PowerShell**. Execute:
 
 ```powershell
-# 1. Primeiro, instale os programas básicos
-.\scripts\install-programs.ps1
-
-# 2. Instale o WSL2 (se necessário)
-.\scripts\install-wsl.ps1
-
-# 3. Aplique as personalizações visuais
-.\scripts\customization-screen.ps1
-
-# 4. Otimize o desempenho
-.\scripts\performance-optimize.ps1
-
-# 5. Melhore a privacidade
-.\scripts\privacy-enhancement.ps1
-
-# 6. Remova aplicativos indesejados
-.\scripts\debloat.ps1
-
-# 7. Limpe a barra de tarefas
-.\scripts\taskbar-cleanup.ps1
-
-# 8. Defina o avatar do GitHub como imagem de perfil
-.\scripts\user-avatar.ps1
+$p = "$env:TEMP\pc-setup-bootstrap.ps1"
+Invoke-WebRequest "https://raw.githubusercontent.com/abreufilho/pc-setup-windows/main/bootstrap.ps1" -OutFile $p
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p
 ```
 
-> O script do WSL pode solicitar uma reinicialização. Nesse caso, reinicie o
-> computador e execute `setup.bat` novamente para continuar as demais etapas.
+O bootstrap baixa uma cópia nova em `C:\Users\<usuario>\pc-setup-windows` e abre
+`setup.bat`. O launcher solicita elevação pelo UAC sem alterar permanentemente a
+política de execução do PowerShell.
+
+Também é possível baixar o ZIP pelo GitHub, extrair e dar duplo clique em
+`setup.bat`.
+
+## Configuração recomendada
+
+No menu, escolha **Executar configuração recomendada**. A ordem é:
+
+1. Instalar e iniciar o OpenSSH Server.
+2. Restringir a porta 22 à sub-rede local e instalar a chave pública configurada.
+3. Criar um ponto de restauração, quando o Windows permitir.
+4. Desativar e desinstalar o OneDrive, preservando eventuais arquivos locais.
+5. Remover apps de consumo e seu provisionamento para todos os usuários.
+6. Instalar programas pelo WinGet.
+7. Instalar ou atualizar WSL 2 com Ubuntu.
+8. Aplicar tema, desempenho conservador, privacidade e barra de tarefas.
+9. Configurar o avatar do usuário.
+
+Para executar o preset sem abrir o menu:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -Preset Recommended
+```
+
+O preset pode ser executado novamente. Programas já presentes são ignorados,
+valores de registro são reaplicados e regras existentes são atualizadas.
+
+## Acesso SSH
+
+A chave pública dedicada está em `config/setup.psd1`. A chave privada permanece
+somente na máquina controladora em:
+
+```text
+~/.ssh/pc_setup_windows
+```
+
+Depois que a etapa SSH mostrar o IPv4 e o fingerprint do servidor, conecte-se da
+máquina controladora com:
+
+```bash
+ssh -i ~/.ssh/pc_setup_windows USUARIO_DO_WINDOWS@IP_DO_WINDOWS
+```
+
+A regra criada aceita conexões na porta 22 apenas de `LocalSubnet`. O script
+desativa a regra ampla criada automaticamente pelo Windows, valida o
+`sshd_config`, restringe o arquivo de chaves aos SIDs de Administradores e SYSTEM
+e testa a porta local antes de reportar sucesso. Não exponha a porta 22 no
+roteador.
+
+## OneDrive
+
+`scripts/remove-onedrive.ps1`:
+
+- bloqueia a sincronização por política local;
+- remove a inicialização automática;
+- encerra o processo;
+- tenta desinstalar pelo WinGet e usa o instalador do Windows como fallback;
+- nunca apaga `C:\Users\<usuario>\OneDrive`.
+
+Se essa pasta existir, o script apenas emite um aviso para que os arquivos possam
+ser revisados manualmente.
+
+## Programas
+
+Os pacotes ficam declarados em `config/setup.psd1`, separados em `Core`,
+`Development` e `Personal`:
+
+- Git, Visual Studio Code, KeePassXC e Google Chrome;
+- Docker Desktop e DBeaver;
+- Obsidian, Google Drive, Discord e WhatsApp.
+
+É possível instalar somente um grupo:
+
+```powershell
+.\scripts\install-programs.ps1 -Group Core
+.\scripts\install-programs.ps1 -Group Development
+.\scripts\install-programs.ps1 -Group Personal
+```
+
+O instalador usa identificador exato, fonte explícita, aceitação dos contratos e
+validação de código de saída do WinGet.
+
+## WSL 2
+
+O script usa o fluxo atual `wsl --install`, instala Ubuntu sem abri-lo durante o
+setup e não reinicia o computador sozinho. Quando solicitado:
+
+1. termine as demais etapas;
+2. reinicie o Windows;
+3. abra Ubuntu e crie o usuário Linux;
+4. abra Docker Desktop.
+
+Documentação oficial: [instalar WSL](https://learn.microsoft.com/windows/wsl/install).
+
+## Limpeza pós-formatação
+
+A limpeza agressiva faz parte do preset e não pede confirmação porque essa é a
+finalidade explícita do repositório. Ela remove, para contas existentes e futuras,
+itens como Clipchamp, Outlook, Teams, Copilot, Bing, Phone Link, Xbox, Dev Home,
+Power Automate, apps de comunicação e outros pacotes listados em
+`config/setup.psd1`.
+
+Continuam protegidos Windows Security, Store, App Installer/WinGet, Start,
+Calculator, Notepad, Photos, Paint, Snipping Tool e Camera, além de Defender,
+Windows Update, Edge WebView, pesquisa e serviços essenciais. Essa fronteira evita
+transformar “debloat” em quebra do sistema.
+
+Os antigos tweaks globais de paginação, cache, rede e serviços foram removidos.
+O plano de energia padrão é `Balanced`; a preferência pode ser alterada em
+`config/setup.psd1`.
+
+## Estrutura
+
+```text
+.
+├── bootstrap.ps1               # baixa e abre uma cópia nova do setup
+├── setup.bat                   # launcher elevado para duplo clique
+├── setup.ps1                   # menu e orquestração
+├── config/
+│   └── setup.psd1              # preferências e pacotes
+├── scripts/
+│   ├── lib/Setup.Common.psm1   # validação, registro e comandos nativos
+│   └── *.ps1                   # uma responsabilidade por script
+└── tests/
+    └── Invoke-StaticAnalysis.ps1
+```
+
+Cada execução grava um transcript em `logs/`; essa pasta não é versionada.
+
+## QA local
+
+Execute no Windows PowerShell 5.1:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Invoke-StaticAnalysis.ps1
+```
+
+O QA valida sintaxe, configuração, scripts referenciados, IDs duplicados e a
+reintrodução de alterações destrutivas conhecidas. O projeto não usa GitHub
+Actions; a validação é intencionalmente local e manual.
+
+## Requisitos e segurança
+
+- Windows 11 com Windows PowerShell 5.1.
+- Internet para WinGet, WSL, avatar e OpenSSH.
+- Conta com permissão de administrador.
+- Reinicialização depois do WSL quando indicada.
+
+O OpenSSH é instalado pelo recurso opcional oficial do Windows e configurado como
+serviço automático. Consulte a [documentação oficial do OpenSSH para
+Windows](https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse).
+
+## Referências de engenharia
+
+O projeto [ChrisTitusTech/winutil](https://github.com/ChrisTitusTech/winutil)
+serviu como referência para ponto de restauração, ACL por SID e validação do
+fluxo SSH. O código deste repositório permanece independente e deliberadamente
+não incorpora bypasses de instalação, desativação de serviços essenciais ou
+limpeza de dados residuais do OneDrive oferecidos pelo WinUtil.

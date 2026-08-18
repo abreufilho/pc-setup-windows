@@ -1,0 +1,9 @@
+.drafts/
+logs/
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+desktop.ini
+
