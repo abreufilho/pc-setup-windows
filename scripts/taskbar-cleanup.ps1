@@ -10,7 +10,13 @@ Assert-SetupEnvironment -RequireAdministrator
 
 Write-SetupSection -Message 'Barra de tarefas'
 $advancedPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
-Set-SetupRegistryValue -Path $advancedPath -Name 'TaskbarDa' -Value 0
+
+# Politica oficial para desabilitar Widgets; TaskbarDa e protegido em builds recentes.
+Set-SetupRegistryValue `
+    -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh' `
+    -Name 'AllowNewsAndInterests' `
+    -Value 0
+
 Set-SetupRegistryValue -Path $advancedPath -Name 'ShowTaskViewButton' -Value 0
 
 Set-SetupRegistryValue `

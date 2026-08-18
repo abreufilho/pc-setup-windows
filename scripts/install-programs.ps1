@@ -31,9 +31,12 @@ if ($null -eq $winget) {
     throw 'WinGet nao esta disponivel. Atualize o App Installer pela Microsoft Store e execute novamente.'
 }
 
-Invoke-SetupNativeCommand `
-    -FilePath 'winget.exe' `
-    -ArgumentList @('source', 'update', '--accept-source-agreements')
+foreach ($source in @($packages.Source | Select-Object -Unique)) {
+    & winget.exe source update --name $source --disable-interactivity
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Nao foi possivel atualizar a fonte WinGet '$source'; as instalacoes ainda serao tentadas."
+    }
+}
 
 $failures = New-Object System.Collections.Generic.List[string]
 

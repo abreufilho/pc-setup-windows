@@ -32,8 +32,13 @@ Set-SetupRegistryValue `
     -Name 'TaskbarAl' `
     -Value 0
 
-& rundll32.exe user32.dll,UpdatePerUserSystemParameters
-if ($LASTEXITCODE -ne 0) {
+$refreshProcess = Start-Process `
+    -FilePath 'rundll32.exe' `
+    -ArgumentList 'user32.dll,UpdatePerUserSystemParameters' `
+    -Wait `
+    -PassThru
+
+if ($refreshProcess.ExitCode -ne 0) {
     Write-Warning 'O papel de parede sera atualizado no proximo login.'
 }
 

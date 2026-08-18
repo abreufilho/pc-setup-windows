@@ -125,6 +125,31 @@ if ($sshSetupContent -notmatch '(?s)Get-WindowsCapability.+Add-WindowsCapability
     $failures.Add('A instalacao do OpenSSH deve validar novamente o estado da capability.')
 }
 
+Write-Host 'Validando correcoes observadas no Windows...' -ForegroundColor Cyan
+$oneDriveContent = Get-Content -LiteralPath (Join-Path $rootPath 'scripts\remove-onedrive.ps1') -Raw
+$programsContent = Get-Content -LiteralPath (Join-Path $rootPath 'scripts\install-programs.ps1') -Raw
+$customizationContent = Get-Content -LiteralPath (Join-Path $rootPath 'scripts\customization-screen.ps1') -Raw
+$taskbarContent = Get-Content -LiteralPath (Join-Path $rootPath 'scripts\taskbar-cleanup.ps1') -Raw
+
+if ($oneDriveContent -match 'Invoke-SetupNativeCommand.+OneDriveSetup' -or
+    $oneDriveContent -notmatch 'Test-OneDriveInstalled') {
+    $failures.Add('A remocao do OneDrive deve validar o estado em vez de confiar no exit code do fallback.')
+}
+
+if ($programsContent -match "source', 'update', '--accept-source-agreements" -or
+    $programsContent -notmatch 'source update --name \$source --disable-interactivity') {
+    $failures.Add('A atualizacao das fontes deve usar argumentos aceitos pelo WinGet 1.9.')
+}
+
+if ($customizationContent -match '\$LASTEXITCODE') {
+    $failures.Add('A atualizacao visual nao deve depender de LASTEXITCODE indefinido.')
+}
+
+if ($taskbarContent -match "-Name 'TaskbarDa'" -or
+    $taskbarContent -notmatch "-Name 'AllowNewsAndInterests'") {
+    $failures.Add('A limpeza da barra deve usar a politica oficial de Widgets.')
+}
+
 Write-Host 'Validando launcher...' -ForegroundColor Cyan
 $launcherPath = Join-Path $rootPath 'setup.bat'
 $launcherContent = Get-Content -LiteralPath $launcherPath -Raw
