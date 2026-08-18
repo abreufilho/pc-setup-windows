@@ -18,17 +18,17 @@ Depois:
 3. Confirme o aviso do Windows e a solicitação do UAC.
 
 O instalador baixa a versão mais recente, cria ou atualiza sempre a mesma pasta
-`C:\Users\<usuario>\pc-setup-windows` e abre `setup.bat`. Ele pode ser executado
-novamente sem criar cópias numeradas e sem repetir instalações já concluídas.
-O launcher solicita elevação pelo UAC sem alterar permanentemente a política de
-execução do PowerShell. Em caso de falha, a janela permanece aberta com o erro.
+`C:\Users\<usuario>\pc-setup-windows` e executa automaticamente a configuração
+recomendada como administrador. Ele pode ser executado novamente sem criar
+cópias numeradas e sem repetir instalações já concluídas. A janela elevada
+permanece aberta para exibir o resultado ou qualquer erro.
 
 Como alternativa, é possível baixar o ZIP pelo GitHub, extrair e dar duplo clique
 em `setup.bat`.
 
 ## Configuração recomendada
 
-No menu, escolha **Executar configuração recomendada**. A ordem é:
+O `install.bat` executa automaticamente a configuração recomendada nesta ordem:
 
 1. Instalar e iniciar o OpenSSH Server.
 2. Restringir a porta 22 à sub-rede local e instalar a chave pública configurada.
@@ -40,7 +40,8 @@ No menu, escolha **Executar configuração recomendada**. A ordem é:
 8. Aplicar tema, desempenho conservador, privacidade e barra de tarefas.
 9. Configurar o avatar do usuário.
 
-Para executar o preset sem abrir o menu:
+Para abrir o menu posteriormente, execute `setup.bat`. Para executar o preset
+manualmente sem abrir o menu:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -Preset Recommended

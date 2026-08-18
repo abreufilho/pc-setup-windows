@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-    [string] $Branch = 'main'
+    [string] $Branch = 'main',
+
+    [ValidateSet('Menu', 'Recommended')]
+    [string] $Preset = 'Recommended'
 )
 
 Set-StrictMode -Version 2.0
@@ -40,7 +43,32 @@ try {
 
     Write-Host "Setup atualizado em: $destinationPath" -ForegroundColor Green
 
-    Start-Process -FilePath (Join-Path $destinationPath 'setup.bat') -WorkingDirectory $destinationPath
+    $setupPath = Join-Path $destinationPath 'setup.ps1'
+    $powerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $setupArguments = @(
+        '-NoLogo'
+        '-NoExit'
+        '-NoProfile'
+        '-ExecutionPolicy'
+        'Bypass'
+        '-File'
+        ('"{0}"' -f $setupPath)
+        '-Preset'
+        $Preset
+    )
+
+    Write-Host 'Solicitando permissao de administrador...' -ForegroundColor Cyan
+    $setupProcess = Start-Process `
+        -FilePath $powerShellPath `
+        -ArgumentList $setupArguments `
+        -WorkingDirectory $destinationPath `
+        -Verb RunAs `
+        -Wait `
+        -PassThru
+
+    if ($setupProcess.ExitCode -ne 0) {
+        throw "O setup elevado terminou com o codigo $($setupProcess.ExitCode)."
+    }
 } finally {
     if (Test-Path -LiteralPath $temporaryDirectory) {
         Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force

@@ -141,6 +141,18 @@ if ($bootstrapContent -notmatch 'Join-Path \$env:USERPROFILE ''pc-setup-windows'
     $failures.Add('bootstrap.ps1 deve atualizar sempre o mesmo destino.')
 }
 
+if ($bootstrapContent -notmatch "\[string\] \`$Preset = 'Recommended'") {
+    $failures.Add('bootstrap.ps1 deve executar o preset recomendado por padrao.')
+}
+
+if ($bootstrapContent -notmatch '(?s)Start-Process.+-Verb RunAs.+-Wait.+-PassThru') {
+    $failures.Add('bootstrap.ps1 deve aguardar o setup elevado diretamente.')
+}
+
+if ($bootstrapContent -match 'Start-Process -FilePath \(Join-Path \$destinationPath ''setup\.bat''\)') {
+    $failures.Add('bootstrap.ps1 nao deve depender de outro launcher BAT.')
+}
+
 if ($failures.Count -gt 0) {
     Write-Host ''
     foreach ($failure in $failures) {
