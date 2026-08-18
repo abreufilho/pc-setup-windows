@@ -194,6 +194,11 @@ if ($bootstrapContent -match 'Start-Process -FilePath \(Join-Path \$destinationP
     $failures.Add('bootstrap.ps1 nao deve depender de outro launcher BAT.')
 }
 
+if ($bootstrapContent -notmatch '\[switch\] \$AlreadyElevated' -or
+    $bootstrapContent -notmatch 'IsInRole\(\[Security\.Principal\.WindowsBuiltInRole\]::Administrator\)') {
+    $failures.Add('O modo remoto do bootstrap deve exigir uma sessao administrativa real.')
+}
+
 if ($failures.Count -gt 0) {
     Write-Host ''
     foreach ($failure in $failures) {

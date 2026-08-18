@@ -3,7 +3,9 @@ param(
     [string] $Branch = 'main',
 
     [ValidateSet('Menu', 'Recommended')]
-    [string] $Preset = 'Recommended'
+    [string] $Preset = 'Recommended',
+
+    [switch] $AlreadyElevated
 )
 
 Set-StrictMode -Version 2.0
@@ -45,9 +47,11 @@ try {
 
     $setupPath = Join-Path $destinationPath 'setup.ps1'
     $powerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    $setupArguments = @(
-        '-NoLogo'
-        '-NoExit'
+    $setupArguments = @('-NoLogo')
+    if (-not $AlreadyElevated) {
+        $setupArguments += '-NoExit'
+    }
+    $setupArguments += @(
         '-NoProfile'
         '-ExecutionPolicy'
         'Bypass'
@@ -57,17 +61,30 @@ try {
         $Preset
     )
 
-    Write-Host 'Solicitando permissao de administrador...' -ForegroundColor Cyan
-    $setupProcess = Start-Process `
-        -FilePath $powerShellPath `
-        -ArgumentList $setupArguments `
-        -WorkingDirectory $destinationPath `
-        -Verb RunAs `
-        -Wait `
-        -PassThru
+    if ($AlreadyElevated) {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw 'AlreadyElevated foi informado, mas a sessao nao possui privilegios administrativos.'
+        }
 
-    if ($setupProcess.ExitCode -ne 0) {
-        throw "O setup elevado terminou com o codigo $($setupProcess.ExitCode)."
+        & $powerShellPath @setupArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "O setup terminou com o codigo $LASTEXITCODE."
+        }
+    } else {
+        Write-Host 'Solicitando permissao de administrador...' -ForegroundColor Cyan
+        $setupProcess = Start-Process `
+            -FilePath $powerShellPath `
+            -ArgumentList $setupArguments `
+            -WorkingDirectory $destinationPath `
+            -Verb RunAs `
+            -Wait `
+            -PassThru
+
+        if ($setupProcess.ExitCode -ne 0) {
+            throw "O setup elevado terminou com o codigo $($setupProcess.ExitCode)."
+        }
     }
 } finally {
     if (Test-Path -LiteralPath $temporaryDirectory) {
