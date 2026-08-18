@@ -109,6 +109,22 @@ foreach ($file in $productionFiles) {
     }
 }
 
+Write-Host 'Validando inicializacao do OpenSSH...' -ForegroundColor Cyan
+$sshSetupPath = Join-Path $rootPath 'scripts\enable-ssh.ps1'
+$sshSetupContent = Get-Content -LiteralPath $sshSetupPath -Raw
+$sshStartIndex = $sshSetupContent.IndexOf('Start-Service -Name sshd')
+$sshConfigCheckIndex = $sshSetupContent.IndexOf(
+    'if (-not (Test-Path -LiteralPath $sshdConfigPath))'
+)
+
+if ($sshStartIndex -lt 0 -or $sshConfigCheckIndex -lt 0 -or $sshStartIndex -gt $sshConfigCheckIndex) {
+    $failures.Add('O servico sshd deve iniciar antes da validacao inicial de sshd_config.')
+}
+
+if ($sshSetupContent -notmatch '(?s)Get-WindowsCapability.+Add-WindowsCapability.+Get-WindowsCapability') {
+    $failures.Add('A instalacao do OpenSSH deve validar novamente o estado da capability.')
+}
+
 Write-Host 'Validando launcher...' -ForegroundColor Cyan
 $launcherPath = Join-Path $rootPath 'setup.bat'
 $launcherContent = Get-Content -LiteralPath $launcherPath -Raw

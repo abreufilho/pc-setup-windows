@@ -25,6 +25,15 @@ if ($capability.State -ne 'Installed') {
     if ($result.RestartNeeded) {
         Write-Warning 'O Windows solicitou uma reinicializacao para concluir o OpenSSH.'
     }
+
+    $capability = Get-WindowsCapability -Online -Name $capabilityName
+    if ($capability.State -ne 'Installed') {
+        if ($result.RestartNeeded) {
+            throw 'A instalacao do OpenSSH depende de reinicializacao. Reinicie o Windows e execute o install.bat novamente.'
+        }
+
+        throw "O Windows nao concluiu a instalacao do OpenSSH. Estado atual: $($capability.State)."
+    }
 }
 
 $sshProgramDataPath = Join-Path $env:ProgramData 'ssh'
@@ -32,8 +41,22 @@ $sshdConfigPath = Join-Path $sshProgramDataPath 'sshd_config'
 $authorizedKeysPath = Join-Path $sshProgramDataPath 'administrators_authorized_keys'
 $sshdExecutablePath = Join-Path $env:SystemRoot 'System32\OpenSSH\sshd.exe'
 
+# O Windows gera sshd_config e as host keys no primeiro start do servico.
+$service = Get-Service -Name sshd -ErrorAction Stop
+Set-Service -Name sshd -StartupType Automatic
+if ($service.Status -ne 'Running') {
+    Start-Service -Name sshd
+} elseif (-not (Test-Path -LiteralPath $sshdConfigPath)) {
+    Restart-Service -Name sshd -Force
+}
+
+$configDeadline = (Get-Date).AddSeconds(10)
+while (-not (Test-Path -LiteralPath $sshdConfigPath) -and (Get-Date) -lt $configDeadline) {
+    Start-Sleep -Milliseconds 250
+}
+
 if (-not (Test-Path -LiteralPath $sshdConfigPath)) {
-    throw "Configuracao do OpenSSH nao encontrada: $sshdConfigPath"
+    throw "O servico sshd iniciou, mas nao gerou a configuracao esperada: $sshdConfigPath"
 }
 
 $sshdConfig = Get-Content -LiteralPath $sshdConfigPath -Raw
@@ -58,12 +81,6 @@ if (-not ($hasAdministratorsMatch -and $hasAdministratorsKeyFile)) {
         Copy-Item -LiteralPath $backupPath -Destination $sshdConfigPath -Force
         throw 'A configuracao SSH gerada era invalida e foi restaurada a partir do backup.'
     }
-}
-
-$service = Get-Service -Name sshd -ErrorAction Stop
-Set-Service -Name sshd -StartupType Automatic
-if ($service.Status -ne 'Running') {
-    Start-Service -Name sshd
 }
 
 Write-SetupSection -Message 'Restringindo o firewall a rede local'
